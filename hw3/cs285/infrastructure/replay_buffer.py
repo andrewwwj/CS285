@@ -86,7 +86,7 @@ class MemoryEfficientReplayBuffer:
     def __init__(self, frame_history_len: int, capacity=1000000):
         self.max_size = capacity
 
-        # Technically we need max_size*2 to support both obs and next_obs.
+        # Technically we need (max_size * 2) to support both obs and next_obs.
         # Otherwise we'll end up overwriting old observations' frames, but the
         # corresponding next_observation_framebuffer_idcs will still point to the old frames.
         # (It's okay though because the unused data will be paged out)
@@ -136,12 +136,9 @@ class MemoryEfficientReplayBuffer:
     def _insert_frame(self, frame: np.ndarray) -> int:
         """
         Insert a single frame into the replay buffer.
-
         Returns the index of the frame in the replay buffer.
         """
-        assert (
-            frame.ndim == 2
-        ), "Single-frame observation should have dimensions (H, W)"
+        assert (frame.ndim == 2), "Single-frame observation should have dimensions (H, W)"
         assert frame.dtype == np.uint8, "Observation should be uint8 (0-255)"
 
         self.framebuffer[self.framebuffer_idx] = frame
