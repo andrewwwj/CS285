@@ -34,7 +34,7 @@ class SoftActorCritic(nn.Module):
         num_critic_updates: int = 1,
         # Settings for multiple critics
         num_critic_networks: int = 1,
-        target_critic_backup_type: str = "mean",  # One of "doubleq", "min", "redq", or "mean"
+        target_critic_backup_type: str = "doubleq",  # One of "doubleq", "min", "redq", or "mean"
         # Soft actor-critic
         use_entropy_bonus: bool = False,
         temperature: float = 0.0,
@@ -42,21 +42,14 @@ class SoftActorCritic(nn.Module):
     ):
         super().__init__()
 
-        assert target_critic_backup_type in [
-            "doubleq",
-            "min",
-            "mean",
-            "redq",
-        ], f"{target_critic_backup_type} is not a valid target critic backup type"
+        assert target_critic_backup_type in ["doubleq", "min", "mean", "redq",], \
+            f"{target_critic_backup_type} is not a valid target critic backup type"
 
-        assert actor_gradient_type in [
-            "reinforce",
-            "reparametrize",
-        ], f"{actor_gradient_type} is not a valid type of actor gradient update"
+        assert actor_gradient_type in ["reinforce", "reparametrize",], \
+            f"{actor_gradient_type} is not a valid type of actor gradient update"
 
-        assert (
-            target_update_period is not None or soft_target_update_rate is not None
-        ), "Must specify either target_update_period or soft_target_update_rate"
+        assert (target_update_period is not None or soft_target_update_rate is not None), \
+            "Must specify either target_update_period or soft_target_update_rate"
 
         self.actor = make_actor(observation_shape, action_dim)
         self.actor_optimizer = make_actor_optimizer(self.actor.parameters())
@@ -147,8 +140,8 @@ class SoftActorCritic(nn.Module):
 
         # TODO(student): Implement the different backup strategies.
         if self.target_critic_backup_type == "doubleq":
-            pass
-        elif self.target_critic_backup_type == "min":
+            next_qs = next_qs.flip(0)  # change Q_A and Q_B
+        elif self.target_critic_backup_type == "min":  # clip-Q
             next_qs, _ = torch.min(next_qs, dim=0)
         elif self.target_critic_backup_type == "mean":
             next_qs = torch.mean(next_qs, dim=0)
@@ -156,16 +149,13 @@ class SoftActorCritic(nn.Module):
             # Default, we don't need to do anything.
             pass
 
-
         # If our backup strategy removed a dimension, add it back in explicitly
         # (assume the target for each critic will be the same)
         if next_qs.shape == (batch_size,):
             next_qs = next_qs[None].expand((self.num_critic_networks, batch_size)).contiguous()
 
-        assert next_qs.shape == (
-            self.num_critic_networks,
-            batch_size,
-        ), next_qs.shape
+        assert next_qs.shape == (self.num_critic_networks, batch_size,), next_qs.shape
+
         return next_qs
 
     def update_critic(
